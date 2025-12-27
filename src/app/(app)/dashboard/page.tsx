@@ -1,64 +1,52 @@
 'use client';
 
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import type { Project } from '@/lib/types';
-import ProjectCard from '@/components/dashboard/project-card';
-import CreateProjectDialog from '@/components/dashboard/create-project-dialog';
-import { useCollection } from '@/firebase/firestore/use-collection';
 import { useUser } from '@/firebase';
-import { useMemo } from 'react';
-import { collection } from 'firebase/firestore';
-import { useFirestore, useMemoFirebase } from '@/firebase/provider';
-import { Skeleton } from '@/components/ui/skeleton';
-
-const DashboardSkeleton = () => (
-  <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-    <Skeleton className="h-[250px] w-full" />
-    <Skeleton className="h-[250px] w-full" />
-    <Skeleton className="h-[250px] w-full" />
-  </div>
-);
+import { ArrowUp, Paperclip, Plus, Sparkles } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 export default function DashboardPage() {
   const { user } = useUser();
-  const firestore = useFirestore();
 
-  const projectsQuery = useMemoFirebase(
-    () =>
-      user ? collection(firestore, 'users', user.uid, 'projects') : null,
-    [firestore, user]
-  );
-
-  const { data: projects, isLoading } = useCollection<Omit<Project, 'id'>>(projectsQuery);
+  const userName = user?.displayName?.split(' ')[0] || user?.email?.split('@')[0];
 
   return (
-    <div className="container mx-auto px-0">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-            Projects
-          </h1>
-          <p className="text-muted-foreground">
-            Manage your AI projects or create a new one.
-          </p>
-        </div>
-        <CreateProjectDialog>
-          <Button>
-            <Plus className="-ml-1 mr-2 h-4 w-4" />
-            New Project
-          </Button>
-        </CreateProjectDialog>
+    <div className="flex h-full flex-col items-center justify-center">
+      <div
+        className="absolute inset-0 -z-10 h-full w-full bg-cover bg-center"
+        style={{
+          backgroundImage:
+            'radial-gradient(ellipse 80% 50% at 50% -20%, hsl(var(--primary) / 0.3), transparent), radial-gradient(ellipse 80% 50% at 50% 120%, hsl(var(--accent) / 0.3), transparent)',
+        }}
+      ></div>
+      <div className="flex flex-1 flex-col items-center justify-center text-center">
+        <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
+          Ready to build, {userName}?
+        </h1>
       </div>
-      {isLoading ? (
-        <DashboardSkeleton />
-      ) : (
-        <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {projects?.map((project) => (
-            <ProjectCard key={project.id} project={project} />
-          ))}
+      <div className="w-full max-w-3xl pb-8">
+        <div className="relative rounded-2xl border bg-background/80 p-3 shadow-lg backdrop-blur-sm">
+          <Input
+            placeholder="Ask Pipeline AI to create an ML model for you..."
+            className="h-12 border-none bg-transparent pl-4 pr-32 text-base ring-offset-transparent focus-visible:ring-0 focus-visible:ring-transparent"
+          />
+          <div className="absolute right-4 top-1/2 flex -translate-y-1/2 items-center gap-2">
+            <Button variant="ghost" size="icon">
+              <Plus className="h-5 w-5" />
+            </Button>
+            <Button variant="ghost" size="icon">
+              <Paperclip className="h-5 w-5" />
+            </Button>
+            <Button variant="ghost" className="hidden sm:flex">
+              <Sparkles className="mr-2 h-4 w-4" />
+              Theme
+            </Button>
+            <Button size="icon" className="rounded-full">
+              <ArrowUp className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

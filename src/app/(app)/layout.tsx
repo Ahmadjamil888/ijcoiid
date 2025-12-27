@@ -20,17 +20,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (isUserLoading || !user) {
     return (
        <div className="flex min-h-screen w-full">
-        <aside className="hidden w-72 flex-col border-r bg-card lg:flex p-4">
-            <Skeleton className="h-16 w-full" />
+        <aside className="hidden w-16 flex-col border-r bg-card lg:flex p-2 gap-4">
+            <Skeleton className="h-10 w-10 rounded-lg" />
             <div className="flex-1 mt-4 space-y-4">
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-10 w-full mt-4" />
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-10 w-10 rounded-lg" />
+                <Skeleton className="h-10 w-10 rounded-lg" />
+                <Skeleton className="h-10 w-10 rounded-lg" />
+                <Skeleton className="h-10 w-10 rounded-lg" />
             </div>
-            <div className="mt-auto">
-                <Skeleton className="h-12 w-full" />
+            <div className="mt-auto space-y-4">
+                <Skeleton className="h-10 w-10 rounded-lg" />
+                <Skeleton className="h-10 w-10 rounded-lg" />
+                <Skeleton className="h-9 w-9 rounded-full" />
             </div>
         </aside>
         <div className="flex flex-1 flex-col">
@@ -53,8 +54,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen w-full">
       <AppSidebar />
       <div className="flex flex-1 flex-col">
-        <AppHeader />
-        <main className="flex-1 p-4 md:p-6 lg:p-8">{children}</main>
+        <main className="flex-1">{children}</main>
       </div>
     </div>
   );

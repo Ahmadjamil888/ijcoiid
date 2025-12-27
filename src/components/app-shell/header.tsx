@@ -35,32 +35,46 @@ import {
     BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import Logo from '@/components/logo';
-import { mockProjects } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { useAuth, useUser } from '@/firebase';
+import { useAuth, useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import type { Project } from '@/lib/types';
+import { collection } from 'firebase/firestore';
 
 
 const BreadcrumbNav = () => {
     const pathname = usePathname();
     const segments = pathname.split('/').filter(Boolean);
-    const project = segments[0] === 'projects' ? mockProjects.find(p => p.id === segments[1]) : null;
+    
+    const { user } = useUser();
+    const firestore = useFirestore();
+
+    const projectsQuery = useMemoFirebase(() => (user ? collection(firestore, `users/${user.uid}/projects`) : null), [firestore, user]);
+    const { data: projects } = useCollection<Project>(projectsQuery);
+
+    const project = segments[0] === 'projects' ? projects?.find(p => p.id === segments[1]) : null;
+
+    if (segments[0] !== 'projects') return null;
 
     return (
         <Breadcrumb className="hidden md:flex">
             <BreadcrumbList>
                 <BreadcrumbItem>
                     <BreadcrumbLink asChild>
-                        <Link href="/dashboard">Dashboard</Link>
+                        <Link href="/dashboard">Projects</Link>
                     </BreadcrumbLink>
                 </BreadcrumbItem>
                 {project && (
                     <>
                         <BreadcrumbSeparator />
                         <BreadcrumbItem>
-                            <BreadcrumbLink asChild>
-                                <Link href={`/projects/${project.id}`}>{project.name}</Link>
-                            </BreadcrumbLink>
+                             {segments.length > 2 ? (
+                                <BreadcrumbLink asChild>
+                                    <Link href={`/projects/${project.id}`}>{project.name}</Link>
+                                </BreadcrumbLink>
+                            ) : (
+                                <BreadcrumbPage>{project.name}</BreadcrumbPage>
+                            )}
                         </BreadcrumbItem>
                     </>
                 )}
@@ -82,13 +96,21 @@ export default function AppHeader() {
   const pathname = usePathname();
   const { user } = useUser();
   const auth = useAuth();
+  const firestore = useFirestore();
   
+  const projectsQuery = useMemoFirebase(() => (user ? collection(firestore, `users/${user.uid}/projects`) : null), [firestore, user]);
+  const { data: projects } = useCollection<Project>(projectsQuery);
+
   const handleLogout = () => {
     auth.signOut();
   };
 
   const userImage = user?.photoURL;
   const userName = user?.displayName || user?.email;
+
+  if (pathname === '/dashboard') {
+    return null;
+  }
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
@@ -107,9 +129,9 @@ export default function AppHeader() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="flex flex-col p-0">
-          <SheetHeader className="h-16 items-start border-b px-6 pt-4">
-            <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+          <SheetHeader className="border-b px-6 pt-5 pb-4">
             <Logo inApp />
+             <SheetTitle className="sr-only">Navigation</SheetTitle>
           </SheetHeader>
           <nav className="grid gap-2 p-4 text-lg font-medium">
               <Link
@@ -123,7 +145,7 @@ export default function AppHeader() {
                   Dashboard
               </Link>
               <h3 className="px-3 pt-4 text-xs font-semibold uppercase text-muted-foreground">Projects</h3>
-              {mockProjects.map((project) => (
+              {projects?.map((project) => (
                   <Link
                       key={project.id}
                       href={`/projects/${project.id}`}

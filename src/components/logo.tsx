@@ -2,7 +2,7 @@ import { GitBranch } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
-const Logo = ({ className, inApp = false }: { className?: string; inApp?: boolean }) => {
+const Logo = ({ className, inApp = false, hideText = false }: { className?: string; inApp?: boolean, hideText?: boolean }) => {
   const Comp = inApp ? 'div' : Link;
   const props = inApp ? {} : { href: '/' };
 
@@ -11,7 +11,7 @@ const Logo = ({ className, inApp = false }: { className?: string; inApp?: boolea
       <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
         <GitBranch className="h-5 w-5" />
       </div>
-      <span>Pipeline v1.0</span>
+      {!hideText && <span>Pipeline v1.0</span>}
     </Comp>
   );
 };

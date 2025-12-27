@@ -7,31 +7,12 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
-
-// Define the input schema
-export const SuggestNextStepInputSchema = z.object({
-  history: z
-    .array(z.object({ isUser: z.boolean(), text: z.string() }))
-    .describe('The conversation history between the user and the AI.'),
-  projectGoal: z.string().describe('The overall goal of the AI project.'),
-  taskType: z
-    .enum(['NLP', 'CV', 'Audio', 'Tabular'])
-    .describe('The type of task for the AI project.'),
-});
-export type SuggestNextStepInput = z.infer<
-  typeof SuggestNextStepInputSchema
->;
-
-// Define the output schema
-export const SuggestNextStepOutputSchema = z.object({
-  response: z
-    .string()
-    .describe('The AI-generated response to the user query.'),
-});
-export type SuggestNextStepOutput = z.infer<
-  typeof SuggestNextStepOutputSchema
->;
+import {
+  SuggestNextStepInputSchema,
+  SuggestNextStepOutputSchema,
+  type SuggestNextStepInput,
+  type SuggestNextStepOutput,
+} from '@/lib/types';
 
 // Exported function to call the flow
 export async function suggestNextStep(

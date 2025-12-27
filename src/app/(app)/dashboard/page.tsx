@@ -1,6 +1,6 @@
 'use client';
 
-import { useUser, useFirestore } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { ArrowUp, Paperclip, Plus, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,54 @@ import { useToast } from '@/hooks/use-toast';
 import { collection, doc } from 'firebase/firestore';
 import { generatePipelineFromPrompt } from '@/ai/flows/generate-pipeline-from-prompt';
 import { classifyProjectPrompt } from '@/ai/flows/classify-project-prompt';
+import type { Project } from '@/lib/types';
+import ProjectCard from '@/components/dashboard/project-card';
+import { Skeleton } from '@/components/ui/skeleton';
+
+const ProjectGrid = () => {
+    const { user } = useUser();
+    const firestore = useFirestore();
+
+    const projectsQuery = useMemoFirebase(() => (
+        user ? collection(firestore, `users/${user.uid}/projects`) : null
+    ), [firestore, user]);
+
+    const { data: projects, isLoading } = useCollection<Project>(projectsQuery);
+
+    if (isLoading) {
+        return (
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[...Array(3)].map((_, i) => (
+                    <div key={i} className="flex flex-col space-y-3">
+                        <Skeleton className="h-[125px] w-full rounded-xl" />
+                        <div className="space-y-2">
+                            <Skeleton className="h-4 w-[250px]" />
+                            <Skeleton className="h-4 w-[200px]" />
+                        </div>
+                    </div>
+                ))}
+            </div>
+        )
+    }
+
+    if (!projects || projects.length === 0) {
+        return (
+            <div className="text-center py-16 text-muted-foreground">
+                <h3 className="text-lg font-semibold">No projects yet</h3>
+                <p className="text-sm">Use the prompt above to create your first AI project.</p>
+            </div>
+        )
+    }
+
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {projects.map((project) => (
+                <ProjectCard key={project.id} project={project} />
+            ))}
+        </div>
+    );
+};
+
 
 export default function DashboardPage() {
   const { user } = useUser();
@@ -36,17 +84,14 @@ export default function DashboardPage() {
     setIsCreating(true);
 
     try {
-      // 1. Use AI to determine task type and name
       const { taskType, projectName } = await classifyProjectPrompt({ prompt });
       
       if (!taskType || !projectName) {
         throw new Error('AI failed to classify the project.');
       }
 
-      // 2. Create a reference for the new project document
       const projectRef = doc(collection(firestore, `users/${user.uid}/projects`));
       
-      // 3. Save the project document and wait for it to complete
       await setDocumentNonBlocking(projectRef, {
         id: projectRef.id,
         name: projectName,
@@ -59,10 +104,8 @@ export default function DashboardPage() {
         modelCount: 0,
       });
 
-      // 4. Generate the pipeline with AI
       const { pipelineDefinition } = await generatePipelineFromPrompt({ prompt });
       
-      // 5. Add the generated pipeline to the project's subcollection and wait
       const pipelinesCollection = collection(firestore, projectRef.path, 'pipelines');
       await addDocumentNonBlocking(pipelinesCollection, {
           name: 'Initial AI-Generated Pipeline',
@@ -78,7 +121,6 @@ export default function DashboardPage() {
         description: `Navigating to your new project: ${projectName}`,
       });
 
-      // 6. Navigate to the new project page now that everything is created
       router.push(`/projects/${projectRef.id}`);
 
     } catch (error: any) {
@@ -93,51 +135,63 @@ export default function DashboardPage() {
       });
     } finally {
       setIsCreating(false);
+      setPrompt('');
     }
   };
 
 
   return (
-    <div className="flex h-full flex-col items-center justify-center">
-      <div
+    <div className="flex h-full flex-col">
+       <div
         className="absolute inset-0 -z-10 h-full w-full bg-cover bg-center"
         style={{
           backgroundImage:
             'radial-gradient(ellipse 80% 50% at 50% -20%, hsl(var(--primary) / 0.3), transparent), radial-gradient(ellipse 80% 50% at 50% 120%, hsl(var(--accent) / 0.3), transparent)',
         }}
       ></div>
-      <div className="flex flex-1 flex-col items-center justify-center text-center">
-        <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
-          Ready to build, {userName}?
-        </h1>
-      </div>
-      <div className="w-full max-w-3xl pb-8">
-        <form onSubmit={handlePromptSubmit}>
-          <div className="relative rounded-2xl border bg-background/80 p-3 shadow-lg backdrop-blur-sm">
-            <Input
-              placeholder="Ask Pipeline AI to create an ML model for you..."
-              className="h-12 border-none bg-transparent pl-4 pr-32 text-base ring-offset-transparent focus-visible:ring-0 focus-visible:ring-transparent"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              disabled={isCreating}
-            />
-            <div className="absolute right-4 top-1/2 flex -translate-y-1/2 items-center gap-2">
-              <Button variant="ghost" size="icon" type="button" disabled={isCreating}>
-                <Plus className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="icon" type="button" disabled={isCreating}>
-                <Paperclip className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" className="hidden sm:flex" type="button" disabled={isCreating}>
-                <Sparkles className="mr-2 h-4 w-4" />
-                Theme
-              </Button>
-              <Button size="icon" className="rounded-full" type="submit" disabled={isCreating}>
-                <ArrowUp className={`h-5 w-5 ${isCreating ? 'animate-pulse' : ''}`} />
-              </Button>
+
+      <div className="flex-1 space-y-8 p-8 md:space-y-12 md:p-12">
+        <div className="flex flex-col items-center text-center">
+            <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
+                Ready to build, {userName}?
+            </h1>
+            <p className="mt-4 text-lg text-muted-foreground max-w-2xl">
+              Describe your ML goal. AI Console will autonomously generate the pipeline, write the code, and train your model.
+            </p>
+        </div>
+
+        <div className="mx-auto w-full max-w-3xl">
+            <form onSubmit={handlePromptSubmit}>
+            <div className="relative rounded-2xl border bg-background/80 p-3 shadow-lg backdrop-blur-sm">
+                <Input
+                placeholder="e.g., Build a sentiment analysis model for customer reviews..."
+                className="h-12 border-none bg-transparent pl-4 pr-32 text-base ring-offset-transparent focus-visible:ring-0 focus-visible:ring-transparent"
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                disabled={isCreating}
+                />
+                <div className="absolute right-4 top-1/2 flex -translate-y-1/2 items-center gap-2">
+                <Button variant="ghost" size="icon" type="button" disabled={isCreating}>
+                    <Plus className="h-5 w-5" />
+                </Button>
+                <Button variant="ghost" size="icon" type="button" disabled={isCreating}>
+                    <Paperclip className="h-5 w-5" />
+                </Button>
+                <Button size="icon" className="rounded-full" type="submit" disabled={isCreating}>
+                    <ArrowUp className={`h-5 w-5 ${isCreating ? 'animate-spin' : ''}`} />
+                </Button>
+                </div>
             </div>
+            </form>
+        </div>
+        
+        <div className="mx-auto w-full max-w-5xl">
+          <h2 className="text-2xl font-bold tracking-tight">Your Projects</h2>
+          <div className="mt-6">
+            <ProjectGrid />
           </div>
-        </form>
+        </div>
+
       </div>
     </div>
   );

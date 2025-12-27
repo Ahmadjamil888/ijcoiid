@@ -66,7 +66,6 @@ export default function CreatePipelineDialog({
         updatedAt: new Date().toISOString(),
         projectId: params.projectId,
         runCount: 0,
-        lastRunStatus: undefined,
       });
 
       toast({

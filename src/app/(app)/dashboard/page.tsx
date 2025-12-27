@@ -47,7 +47,7 @@ export default function DashboardPage() {
       const projectsCollection = collection(firestore, `users/${user.uid}/projects`);
       const newProjectRef = doc(projectsCollection); // Create ref with new ID
       
-      await addDocumentNonBlocking(collection(firestore, `users/${user.uid}/projects`), {
+      await addDocumentNonBlocking(projectsCollection, {
         id: newProjectRef.id,
         name: projectName,
         taskType,
@@ -73,7 +73,6 @@ export default function DashboardPage() {
           updatedAt: new Date().toISOString(),
           projectId: newProjectRef.id,
           runCount: 0,
-          lastRunStatus: undefined,
       });
       
       toast({

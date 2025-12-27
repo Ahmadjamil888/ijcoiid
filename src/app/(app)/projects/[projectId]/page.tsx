@@ -16,18 +16,16 @@ import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebas
 import { collection } from 'firebase/firestore';
 import type { Pipeline } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useParams } from 'next/navigation';
 
-export default function ProjectPipelinesPage({
-  params,
-}: {
-  params: { projectId: string };
-}) {
+export default function ProjectPipelinesPage() {
+  const params = useParams<{ projectId: string }>();
   const { user } = useUser();
   const firestore = useFirestore();
 
   const pipelinesQuery = useMemoFirebase(
     () =>
-      user
+      user && params.projectId
         ? collection(
             firestore,
             `users/${user.uid}/projects/${params.projectId}/pipelines`

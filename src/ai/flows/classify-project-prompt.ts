@@ -4,25 +4,15 @@
  * @fileOverview A flow to classify a user prompt for a new project.
  *
  * - classifyProjectPrompt - A function that takes a user prompt and returns the task type and a suggested project name.
- * - ClassifyProjectPromptInput - The input type for the classifyProjectPrompt function.
- * - ClassifyProjectPromptOutput - The return type for the classifyProjectPrompt function.
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'zod';
-
-const TaskTypeSchema = z.enum(['NLP', 'CV', 'Audio', 'Tabular']);
-
-export const ClassifyProjectPromptInputSchema = z.object({
-  prompt: z.string().describe("The user's prompt describing the project goal."),
-});
-export type ClassifyProjectPromptInput = z.infer<typeof ClassifyProjectPromptInputSchema>;
-
-export const ClassifyProjectPromptOutputSchema = z.object({
-  taskType: TaskTypeSchema.describe('The classified machine learning task type.'),
-  projectName: z.string().describe('A short, descriptive project name (3-5 words).'),
-});
-export type ClassifyProjectPromptOutput = z.infer<typeof ClassifyProjectPromptOutputSchema>;
+import {
+  ClassifyProjectPromptInputSchema,
+  type ClassifyProjectPromptInput,
+  ClassifyProjectPromptOutputSchema,
+  type ClassifyProjectPromptOutput,
+} from '@/lib/types';
 
 const classificationPrompt = ai.definePrompt({
   name: 'classifyProjectPrompt',

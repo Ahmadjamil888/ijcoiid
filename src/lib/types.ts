@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 export type TaskType = 'NLP' | 'CV' | 'Audio' | 'Tabular';
 
 export type User = {
@@ -63,3 +65,17 @@ export type ApiKey = {
   name: 'Hugging Face' | 'AWS' | 'OpenAI';
   hasKey: boolean;
 };
+
+// AI Flow Schemas
+const TaskTypeSchema = z.enum(['NLP', 'CV', 'Audio', 'Tabular']);
+
+export const ClassifyProjectPromptInputSchema = z.object({
+  prompt: z.string().describe("The user's prompt describing the project goal."),
+});
+export type ClassifyProjectPromptInput = z.infer<typeof ClassifyProjectPromptInputSchema>;
+
+export const ClassifyProjectPromptOutputSchema = z.object({
+  taskType: TaskTypeSchema.describe('The classified machine learning task type.'),
+  projectName: z.string().describe('A short, descriptive project name (3-5 words).'),
+});
+export type ClassifyProjectPromptOutput = z.infer<typeof ClassifyProjectPromptOutputSchema>;

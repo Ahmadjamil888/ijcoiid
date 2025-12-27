@@ -1,7 +1,7 @@
 'use client';
 
 import { useUser, useFirestore } from '@/firebase';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { ArrowUp, Paperclip, Plus, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,12 +43,12 @@ export default function DashboardPage() {
         throw new Error('AI failed to classify the project.');
       }
 
-      // 2. Add the project document to Firestore
-      const projectsCollection = collection(firestore, `users/${user.uid}/projects`);
-      const newProjectRef = doc(projectsCollection); // Create ref with new ID
+      // 2. Create a reference for the new project document
+      const projectRef = doc(collection(firestore, `users/${user.uid}/projects`));
       
-      await addDocumentNonBlocking(projectsCollection, {
-        id: newProjectRef.id,
+      // 3. Save the project document and wait for it to complete
+      await setDocumentNonBlocking(projectRef, {
+        id: projectRef.id,
         name: projectName,
         taskType,
         goal: prompt,
@@ -59,19 +59,17 @@ export default function DashboardPage() {
         modelCount: 0,
       });
 
-      // 3. Generate the pipeline with AI
+      // 4. Generate the pipeline with AI
       const { pipelineDefinition } = await generatePipelineFromPrompt({ prompt });
       
-      // 4. Add the generated pipeline to the project's subcollection
-      const pipelinesCollection = collection(firestore, `users/${user.uid}/projects/${newProjectRef.id}/pipelines`);
-      const newPipelineRef = doc(pipelinesCollection);
+      // 5. Add the generated pipeline to the project's subcollection and wait
+      const pipelinesCollection = collection(firestore, projectRef.path, 'pipelines');
       await addDocumentNonBlocking(pipelinesCollection, {
-          id: newPipelineRef.id,
           name: 'Initial AI-Generated Pipeline',
           nodes: pipelineDefinition,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-          projectId: newProjectRef.id,
+          projectId: projectRef.id,
           runCount: 0,
       });
       
@@ -80,8 +78,8 @@ export default function DashboardPage() {
         description: `Navigating to your new project: ${projectName}`,
       });
 
-      // 5. Navigate to the new project page
-      router.push(`/projects/${newProjectRef.id}`);
+      // 6. Navigate to the new project page now that everything is created
+      router.push(`/projects/${projectRef.id}`);
 
     } catch (error: any) {
       console.error("Failed to create project from prompt:", error);

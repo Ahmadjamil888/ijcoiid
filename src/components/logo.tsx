@@ -11,7 +11,7 @@ const Logo = ({ className, inApp = false, hideText = false }: { className?: stri
       <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
         <GitBranch className="h-5 w-5" />
       </div>
-      {!hideText && <span>Pipeline v1.0</span>}
+      {!hideText && <span>AI Console</span>}
     </Comp>
   );
 };

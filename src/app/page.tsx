@@ -47,10 +47,10 @@ export default function LandingPage() {
       <main className="flex-1">
         <section className="container mx-auto flex flex-col items-center justify-center px-4 py-20 text-center md:py-32">
           <h1 className="text-4xl font-extrabold tracking-tighter md:text-6xl lg:text-7xl">
-            Build, Train, and Deploy AI Like Software.
+            Create AI with AI.
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-            Pipeline AI is a no-code/low-code platform that transforms your ideas into production-grade machine learning pipelines, powered by autonomous AI agents.
+            AI Console is an autonomous platform that turns your concepts into production-ready AI applications, powered by a team of AI agents.
           </p>
           <div className="mt-8 flex gap-4">
             <Button size="lg" asChild>
@@ -103,7 +103,7 @@ export default function LandingPage() {
           <div className="container mx-auto px-4">
             <h2 className="text-center text-3xl font-bold md:text-4xl">The Future of MLOps is Autonomous</h2>
             <p className="mx-auto mt-4 max-w-3xl text-center text-lg text-muted-foreground">
-              Stop wrestling with boilerplate code and complex infrastructure. Pipeline AI handles the heavy lifting so you can focus on what matters.
+              Stop wrestling with boilerplate code and complex infrastructure. AI Console handles the heavy lifting so you can focus on what matters.
             </p>
             <div className="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-4">
               {features.map((feature) => (
@@ -125,7 +125,7 @@ export default function LandingPage() {
       <footer className="border-t">
         <div className="container mx-auto flex flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row">
           <Logo />
-          <p className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} Pipeline AI. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} AI Console. All rights reserved.</p>
         </div>
       </footer>
     </div>

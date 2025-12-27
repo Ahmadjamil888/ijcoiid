@@ -8,8 +8,8 @@ import { FirebaseClientProvider } from '@/firebase';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'Pipeline AI - Build, train, and deploy AI like software.',
-  description: 'A no-code / low-code platform for building and deploying AI & ML pipelines.',
+  title: 'AI Console - Create AI with AI',
+  description: 'An autonomous platform that turns your concepts into production-ready AI applications.',
 };
 
 export default function RootLayout({

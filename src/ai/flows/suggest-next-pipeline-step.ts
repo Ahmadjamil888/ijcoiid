@@ -18,7 +18,8 @@ import {
 export async function suggestNextStep(
   input: SuggestNextStepInput
 ): Promise<SuggestNextStepOutput> {
-  return suggestNextStepFlow(input);
+  const result = await suggestNextStepFlow(input);
+  return result;
 }
 
 // Define the prompt
@@ -51,6 +52,9 @@ const suggestNextStepFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await suggestNextStepPrompt(input);
-    return output!;
+    if (!output) {
+      throw new Error('AI failed to provide a response.');
+    }
+    return output;
   }
 );

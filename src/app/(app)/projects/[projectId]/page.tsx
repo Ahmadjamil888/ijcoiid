@@ -25,7 +25,7 @@ import { useDoc, useUser } from '@/firebase';
 import { useFirestore, useMemoFirebase } from '@/firebase/provider';
 import { useParams } from 'next/navigation';
 import { doc } from 'firebase/firestore';
-import type { Project } from '@/lib/types';
+import type { Project, SuggestNextStepInput } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useState, useRef, useEffect } from 'react';
 import { suggestNextStep } from '@/ai/flows/suggest-next-pipeline-step';
@@ -230,10 +230,10 @@ export default function ProjectConsolePage() {
 
     try {
       const result = await suggestNextStep({
-          history: newMessages,
+          history: newMessages.map(m => ({ isUser: m.isUser, text: m.text })),
           projectGoal: project.goal,
           taskType: project.taskType,
-      });
+      } as SuggestNextStepInput);
       
       setMessages(prev => [...prev, { isUser: false, text: result.response }]);
 

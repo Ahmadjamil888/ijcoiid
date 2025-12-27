@@ -80,10 +80,16 @@ export const ClassifyProjectPromptOutputSchema = z.object({
 });
 export type ClassifyProjectPromptOutput = z.infer<typeof ClassifyProjectPromptOutputSchema>;
 
+
 // suggest-next-pipeline-step schemas
+const MessageSchema = z.object({
+  isUser: z.boolean(),
+  text: z.string(),
+});
+
 export const SuggestNextStepInputSchema = z.object({
   history: z
-    .array(z.object({ isUser: z.boolean(), text: z.string() }))
+    .array(MessageSchema)
     .describe('The conversation history between the user and the AI.'),
   projectGoal: z.string().describe('The overall goal of the AI project.'),
   taskType: TaskTypeSchema.describe('The type of task for the AI project.'),

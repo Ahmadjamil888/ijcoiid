@@ -1,6 +1,7 @@
 'use client';
 
-import { useUser, useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { ArrowUp, Paperclip, Plus, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,8 +10,9 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { collection, doc } from 'firebase/firestore';
 import { generatePipelineFromPrompt } from '@/ai/flows/generate-pipeline-from-prompt';
-import { ai } from '@/ai/genkit';
 import { z } from 'zod';
+import { suggestNextPipelineStep } from '@/ai/flows/suggest-next-pipeline-step';
+import { ai } from '@/ai/genkit';
 
 const TaskTypeSchema = z.enum(['NLP', 'CV', 'Audio', 'Tabular']);
 
@@ -80,7 +82,9 @@ Output your response as a JSON object with "taskType" and "projectName" as keys.
       
       // 4. Add the generated pipeline to the project's subcollection
       const pipelinesCollection = collection(firestore, `users/${user.uid}/projects/${newProjectRef.id}/pipelines`);
+      const newPipelineRef = doc(pipelinesCollection);
       await addDocumentNonBlocking(pipelinesCollection, {
+          id: newPipelineRef.id,
           name: 'Initial AI-Generated Pipeline',
           nodes: pipelineDefinition,
           createdAt: new Date().toISOString(),

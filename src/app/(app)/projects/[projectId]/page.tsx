@@ -17,6 +17,7 @@ import { collection } from 'firebase/firestore';
 import type { Pipeline } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useParams } from 'next/navigation';
+import CreatePipelineDialog from '@/components/project/create-pipeline-dialog';
 
 export default function ProjectPipelinesPage() {
   const params = useParams<{ projectId: string }>();
@@ -40,10 +41,12 @@ export default function ProjectPipelinesPage() {
     <div>
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Pipelines</h2>
-        <Button>
-          <Plus className="-ml-1 mr-2 h-4 w-4" />
-          New Pipeline
-        </Button>
+        <CreatePipelineDialog>
+          <Button>
+            <Plus className="-ml-1 mr-2 h-4 w-4" />
+            New Pipeline
+          </Button>
+        </CreatePipelineDialog>
       </div>
       <div className="mt-6 grid gap-6">
         {isLoading && (
@@ -66,9 +69,9 @@ export default function ProjectPipelinesPage() {
                 </CardTitle>
                 <CardDescription>
                   Updated{' '}
-                  {formatDistanceToNow(new Date(pipeline.updatedAt), {
+                  {pipeline.updatedAt ? formatDistanceToNow(new Date(pipeline.updatedAt), {
                     addSuffix: true,
-                  })}
+                  }) : 'never'}
                 </CardDescription>
               </div>
                <div className="flex items-center gap-2 rounded-lg bg-secondary p-1">

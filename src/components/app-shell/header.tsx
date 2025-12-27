@@ -9,7 +9,8 @@ import {
   Folder,
   Search,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  LogOut,
 } from 'lucide-react';
 import {
   Sheet,
@@ -37,6 +38,7 @@ import Logo from '@/components/logo';
 import { mockProjects, mockUser } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { useAuth, useUser } from '@/firebase';
 
 
 const BreadcrumbNav = () => {
@@ -78,6 +80,15 @@ const BreadcrumbNav = () => {
 
 export default function AppHeader() {
   const pathname = usePathname();
+  const { user } = useUser();
+  const auth = useAuth();
+  
+  const handleLogout = () => {
+    auth.signOut();
+  };
+
+  const userImage = user?.photoURL;
+  const userName = user?.displayName || user?.email;
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
@@ -150,8 +161,8 @@ export default function AppHeader() {
             <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full">
                     <Avatar className="h-8 w-8">
-                        <AvatarImage src={mockUser.image ?? undefined} alt={mockUser.name ?? ''} />
-                        <AvatarFallback>{mockUser.name?.[0]}</AvatarFallback>
+                        <AvatarImage src={userImage ?? undefined} alt={userName ?? ''} />
+                        <AvatarFallback>{userName?.[0].toUpperCase()}</AvatarFallback>
                     </Avatar>
                 </Button>
             </DropdownMenuTrigger>
@@ -159,7 +170,10 @@ export default function AppHeader() {
                 <DropdownMenuItem>Profile</DropdownMenuItem>
                 <DropdownMenuItem>Settings</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>Log out</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Log out
+                </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
       </div>

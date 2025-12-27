@@ -8,6 +8,7 @@ import {
   Folder,
   PanelLeft,
   ChevronDown,
+  LogOut,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -19,12 +20,24 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { mockProjects, mockUser } from '@/lib/data';
+import { mockProjects } from '@/lib/data';
 import Logo from '@/components/logo';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { useAuth, useUser } from '@/firebase';
 
 export default function AppSidebar() {
   const pathname = usePathname();
+  const { user } = useUser();
+  const auth = useAuth();
+
+  const handleLogout = () => {
+    auth.signOut();
+  };
+  
+  const userImage = user?.photoURL;
+  const userName = user?.displayName || user?.email;
+  const userEmail = user?.email;
+
 
   return (
     <aside className="hidden w-72 flex-col border-r bg-card lg:flex">
@@ -82,12 +95,12 @@ export default function AppSidebar() {
                 <Button variant="ghost" className="flex h-auto w-full items-center justify-between p-2">
                     <div className="flex items-center gap-2">
                         <Avatar className="h-8 w-8">
-                            <AvatarImage src={mockUser.image ?? undefined} alt={mockUser.name ?? ''} />
-                            <AvatarFallback>{mockUser.name?.[0]}</AvatarFallback>
+                            <AvatarImage src={userImage ?? undefined} alt={userName ?? ''} />
+                            <AvatarFallback>{userName?.[0].toUpperCase()}</AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col items-start">
-                            <span className="text-sm font-medium">{mockUser.name}</span>
-                            <span className="text-xs text-muted-foreground">{mockUser.email}</span>
+                            <span className="text-sm font-medium">{userName}</span>
+                            <span className="text-xs text-muted-foreground">{userEmail}</span>
                         </div>
                     </div>
                     <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -97,7 +110,10 @@ export default function AppSidebar() {
                 <DropdownMenuItem>Profile</DropdownMenuItem>
                 <DropdownMenuItem>Billing</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>Log out</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log out
+                </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
       </div>

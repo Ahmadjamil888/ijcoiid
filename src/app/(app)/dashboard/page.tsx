@@ -10,11 +10,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { collection, doc } from 'firebase/firestore';
 import { generatePipelineFromPrompt } from '@/ai/flows/generate-pipeline-from-prompt';
-import { z } from 'zod';
-import { suggestNextPipelineStep } from '@/ai/flows/suggest-next-pipeline-step';
-import { ai } from '@/ai/genkit';
-
-const TaskTypeSchema = z.enum(['NLP', 'CV', 'Audio', 'Tabular']);
+import { classifyProjectPrompt } from '@/ai/flows/classify-project-prompt';
 
 export default function DashboardPage() {
   const { user } = useUser();
@@ -41,21 +37,7 @@ export default function DashboardPage() {
 
     try {
       // 1. Use AI to determine task type and name
-      const classificationPrompt = await ai.generate({
-        prompt: `Classify the following user prompt into one of the task types (NLP, CV, Audio, Tabular) and suggest a short, descriptive project name (3-5 words).
-
-User Prompt: "${prompt}"
-
-Output your response as a JSON object with "taskType" and "projectName" as keys.`,
-        output: {
-          schema: z.object({
-            taskType: TaskTypeSchema,
-            projectName: z.string(),
-          }),
-        },
-      });
-
-      const { taskType, projectName } = classificationPrompt.output!;
+      const { taskType, projectName } = await classifyProjectPrompt({ prompt });
       
       if (!taskType || !projectName) {
         throw new Error('AI failed to classify the project.');

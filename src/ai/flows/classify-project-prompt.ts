@@ -14,7 +14,7 @@ import { z } from 'zod';
 const TaskTypeSchema = z.enum(['NLP', 'CV', 'Audio', 'Tabular']);
 
 export const ClassifyProjectPromptInputSchema = z.object({
-  prompt: z.string().describe('The user\'s prompt describing the project goal.'),
+  prompt: z.string().describe("The user's prompt describing the project goal."),
 });
 export type ClassifyProjectPromptInput = z.infer<typeof ClassifyProjectPromptInputSchema>;
 
@@ -24,34 +24,22 @@ export const ClassifyProjectPromptOutputSchema = z.object({
 });
 export type ClassifyProjectPromptOutput = z.infer<typeof ClassifyProjectPromptOutputSchema>;
 
+const classificationPrompt = ai.definePrompt({
+  name: 'classifyProjectPrompt',
+  input: { schema: ClassifyProjectPromptInputSchema },
+  output: { schema: ClassifyProjectPromptOutputSchema },
+  prompt: `Classify the following user prompt into one of the task types (NLP, CV, Audio, Tabular) and suggest a short, descriptive project name (3-5 words).
+
+User Prompt: "{{prompt}}"`,
+});
+
 export async function classifyProjectPrompt(
   input: ClassifyProjectPromptInput
 ): Promise<ClassifyProjectPromptOutput> {
-  return classifyProjectPromptFlow(input);
-}
-
-const classifyProjectPromptFlow = ai.defineFlow(
-  {
-    name: 'classifyProjectPromptFlow',
-    inputSchema: ClassifyProjectPromptInputSchema,
-    outputSchema: ClassifyProjectPromptOutputSchema,
-  },
-  async ({ prompt }) => {
-    const classificationPrompt = await ai.generate({
-      prompt: `Classify the following user prompt into one of the task types (NLP, CV, Audio, Tabular) and suggest a short, descriptive project name (3-5 words).
-
-User Prompt: "${prompt}"
-
-Output your response as a JSON object with "taskType" and "projectName" as keys.`,
-      output: {
-        schema: ClassifyProjectPromptOutputSchema,
-      },
-    });
-
-    const result = classificationPrompt.output;
-    if (!result) {
-      throw new Error('Failed to classify project prompt.');
-    }
-    return result;
+  const result = await classificationPrompt(input);
+  const output = result.output;
+  if (!output) {
+    throw new Error('Failed to classify project prompt.');
   }
-);
+  return output;
+}

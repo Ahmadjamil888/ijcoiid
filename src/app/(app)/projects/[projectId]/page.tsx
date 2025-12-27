@@ -1,3 +1,5 @@
+'use client';
+
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -6,20 +8,35 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { mockPipelines } from '@/lib/data';
 import { Plus, GitBranch, Play, MoreVertical } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import type { Pipeline } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ProjectPipelinesPage({
   params,
 }: {
   params: { projectId: string };
 }) {
-  const pipelines = mockPipelines.filter(
-    (p) => p.projectId === params.projectId
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  const pipelinesQuery = useMemoFirebase(
+    () =>
+      user
+        ? collection(
+            firestore,
+            `users/${user.uid}/projects/${params.projectId}/pipelines`
+          )
+        : null,
+    [firestore, user, params.projectId]
   );
+
+  const { data: pipelines, isLoading } = useCollection<Pipeline>(pipelinesQuery);
 
   return (
     <div>
@@ -31,7 +48,13 @@ export default function ProjectPipelinesPage({
         </Button>
       </div>
       <div className="mt-6 grid gap-6">
-        {pipelines.map((pipeline) => (
+        {isLoading && (
+          <>
+            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-40 w-full" />
+          </>
+        )}
+        {pipelines?.map((pipeline) => (
           <Card key={pipeline.id}>
             <CardHeader className="grid grid-cols-[1fr_auto] items-start gap-4 space-y-0">
               <div className="space-y-1">

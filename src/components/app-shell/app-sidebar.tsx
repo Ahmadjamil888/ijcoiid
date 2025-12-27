@@ -6,11 +6,13 @@ import {
   Home,
   Settings,
   Folder,
-  PanelLeft,
   ChevronDown,
   LogOut,
 } from 'lucide-react';
-
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useUser, useAuth } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import type { Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,20 +22,27 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { mockProjects } from '@/lib/data';
 import Logo from '@/components/logo';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { useAuth, useUser } from '@/firebase';
+import { Skeleton } from '../ui/skeleton';
 
 export default function AppSidebar() {
   const pathname = usePathname();
   const { user } = useUser();
   const auth = useAuth();
+  const firestore = useFirestore();
 
   const handleLogout = () => {
     auth.signOut();
   };
   
+  const projectsQuery = useMemoFirebase(
+    () => (user ? collection(firestore, `users/${user.uid}/projects`) : null),
+    [firestore, user]
+  );
+  
+  const { data: projects, isLoading } = useCollection<Project>(projectsQuery);
+
   const userImage = user?.photoURL;
   const userName = user?.displayName || user?.email;
   const userEmail = user?.email;
@@ -73,7 +82,14 @@ export default function AppSidebar() {
             <h3 className="px-3 text-xs font-semibold uppercase text-muted-foreground">
               Projects
             </h3>
-            {mockProjects.map((project) => (
+            {isLoading && (
+              <div className='space-y-2 px-2'>
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+              </div>
+            )}
+            {projects?.map((project) => (
               <Link
                 key={project.id}
                 href={`/projects/${project.id}`}

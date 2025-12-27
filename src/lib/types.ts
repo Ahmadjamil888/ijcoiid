@@ -9,6 +9,7 @@ export type User = {
 
 export type Project = {
   id: string;
+  userId: string;
   name: string;
   taskType: TaskType;
   goal: string;
@@ -35,7 +36,7 @@ export type Pipeline = {
 };
 
 export type PipelineRun = {
-  id: string;
+  id:string;
   pipelineId: string;
   projectId: string;
   status: 'running' | 'completed' | 'failed';

@@ -3,15 +3,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { GitBranch, Play, Cpu, Settings, Folder } from 'lucide-react';
-import { mockProjects } from '@/lib/data';
 import { cn } from '@/lib/utils';
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
+import { useDoc } from '@/firebase';
+import { useFirestore, useMemoFirebase } from '@/firebase/provider';
+import { doc } from 'firebase/firestore';
+import type { Project } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ProjectLayout({
   children,
@@ -21,7 +18,36 @@ export default function ProjectLayout({
   params: { projectId: string };
 }) {
   const pathname = usePathname();
-  const project = mockProjects.find((p) => p.id === params.projectId);
+  const firestore = useFirestore();
+
+  const projectRef = useMemoFirebase(
+    () => doc(firestore, `users/${params.userId}/projects/${params.projectId}`),
+    [firestore, params.userId, params.projectId]
+  );
+  
+  const { data: project, isLoading } = useDoc<Project>(projectRef);
+
+  if (isLoading) {
+    return (
+        <div className="flex flex-col gap-8">
+            <div>
+                <Skeleton className="h-9 w-1/2" />
+                <Skeleton className="h-5 w-3/4 mt-2" />
+            </div>
+            <nav className="border-b">
+                <div className="flex space-x-6">
+                    <Skeleton className="h-10 w-24" />
+                    <Skeleton className="h-10 w-24" />
+                    <Skeleton className="h-10 w-24" />
+                    <Skeleton className="h-10 w-24" />
+                </div>
+            </nav>
+            <div>
+                <Skeleton className="h-64 w-full" />
+            </div>
+        </div>
+    );
+  }
 
   if (!project) {
     return <div>Project not found</div>;

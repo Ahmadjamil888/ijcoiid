@@ -1,5 +1,9 @@
 import type { Project, Pipeline, PipelineRun, Model, User, ApiKey } from './types';
 
+// This file contains mock data and is no longer the primary source of truth.
+// The application now fetches data from Firestore in real-time.
+// This data is kept for reference or as a fallback if needed.
+
 export const mockUser: User = {
   id: 'user-1',
   name: 'Alex Doe',
@@ -17,6 +21,7 @@ export const mockProjects: Project[] = [
     pipelineCount: 2,
     runCount: 15,
     modelCount: 3,
+    userId: 'user-1'
   },
   {
     id: 'proj-2',
@@ -27,6 +32,7 @@ export const mockProjects: Project[] = [
     pipelineCount: 1,
     runCount: 8,
     modelCount: 2,
+    userId: 'user-1'
   },
   {
     id: 'proj-3',
@@ -37,6 +43,7 @@ export const mockProjects: Project[] = [
     pipelineCount: 3,
     runCount: 22,
     modelCount: 5,
+    userId: 'user-1'
   },
 ];
 

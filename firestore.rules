@@ -1,0 +1,186 @@
+/**
+ * Core Philosophy: This ruleset enforces a strict user-ownership model. All application data is segregated into user-specific data trees, ensuring that users can only access and manage their own information.
+ * Data Structure: All data is nested under the `/users/{userId}` path. This structure makes ownership explicit in the document path, which is the primary mechanism for authorization. This design avoids costly and complex lookups (`get()`) in rules.
+ * Key Security Decisions:
+ *  - User Data Privacy: All collections are private. There are no publicly readable collections. A user must be authenticated and be the owner of the data tree to perform any action.
+ *  - No User Listing: It is not possible to list documents in the top-level `/users` collection, preventing enumeration of all users on the platform.
+ *  - Relational Integrity: On document creation and updates, rules validate that key relational identifiers (like `userId`, `projectId`, `modelId`) match the document's path or are immutable. This maintains data consistency within a user's data tree.
+ *  - Deletion Policy: Users are not permitted to delete their own root profile document (`/users/{userId}`) to prevent orphaned data.
+ * Denormalization for Authorization: The data model is designed around structural segregation. By placing all of a user's resources (projects, pipelines, models) in subcollections under their unique user ID, we create a highly secure and performant system where ownership is determined by the path, not by fields inside the document.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper Functions for Reusable Logic
+
+    /**
+     * Checks if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the authenticated user's UID matches the specified userId from the path.
+     * This is the fundamental check for user ownership.
+     * @param userId The user ID from the document path.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    /**
+     * Verifies ownership and ensures the document already exists.
+     * Used for all update and delete operations to prevent modifying non-existent data.
+     * @param userId The user ID from the document path.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+    
+    /**
+     * Validates that an incoming document's ID field matches its owner's UID.
+     * Used only for creating the root user profile document.
+     */
+    function isCreatingOwnProfile(userId) {
+      return isOwner(userId) && request.resource.data.id == userId;
+    }
+    
+    /**
+     * Validates that an incoming document's owner ID field is immutable on update.
+     */
+    function isOwnerIdImmutable() {
+      return request.resource.data.id == resource.data.id;
+    }
+
+    /**
+     * Validates that a relational foreign key field in a new document matches the parent document's ID from the path.
+     * @param key The name of the field in the document's data (e.g., 'projectId').
+     * @param value The ID from the path wildcard to match against (e.g., projectId).
+     */
+    function newDocHasValidParentLink(key, value) {
+      return request.resource.data[key] == value;
+    }
+
+    /**
+     * Validates that a relational foreign key field is immutable on update.
+     * @param key The name of the field in the document's data (e.g., 'projectId').
+     */
+    function parentLinkIsImmutable(key) {
+      return request.resource.data[key] == resource.data[key];
+    }
+
+    /**
+     * @description Rules for a user's profile document.
+     * @path /users/{userId}
+     * @allow (create) An authenticated user creating their own profile document.
+     * @deny (create) An authenticated user trying to create a profile for another UID.
+     * @principle A user can create and manage their own profile, but cannot delete it.
+     */
+    match /users/{userId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isCreatingOwnProfile(userId);
+      allow update: if isExistingOwner(userId) && isOwnerIdImmutable();
+      allow delete: if false;
+    }
+
+    /**
+     * @description Rules for projects owned by a user.
+     * @path /users/{userId}/projects/{projectId}
+     * @allow (create) An authenticated user creating a project under their own user ID.
+     * @deny (get) An authenticated user trying to read a project owned by someone else.
+     * @principle Enforces strict ownership for all project-related operations.
+     */
+    match /users/{userId}/projects/{projectId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && newDocHasValidParentLink('userId', userId);
+      allow update: if isExistingOwner(userId) && parentLinkIsImmutable('userId');
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Rules for pipelines within a user's project.
+     * @path /users/{userId}/projects/{projectId}/pipelines/{pipelineId}
+     * @allow (update) The project owner updating one of their pipelines.
+     * @deny (list) A different user trying to list pipelines in another user's project.
+     * @principle Restricts access to a user's own data tree and validates relational integrity.
+     */
+    match /users/{userId}/projects/{projectId}/pipelines/{pipelineId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && newDocHasValidParentLink('projectId', projectId);
+      allow update: if isExistingOwner(userId) && parentLinkIsImmutable('projectId');
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Rules for pipeline runs within a user's project.
+     * @path /users/{userId}/projects/{projectId}/pipeline_runs/{pipelineRunId}
+     * @allow (create) The project owner creating a pipeline run within their project.
+     * @deny (delete) A different user trying to delete a pipeline run they do not own.
+     * @principle Restricts access to a user's own data tree.
+     */
+    match /users/{userId}/projects/{projectId}/pipeline_runs/{pipelineRunId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Rules for ML models within a user's project.
+     * @path /users/{userId}/projects/{projectId}/models/{modelId}
+     * @allow (list) The project owner listing all models in their project.
+     * @deny (get) An unauthenticated user trying to read a model.
+     * @principle Restricts access to a user's own data tree and validates relational integrity.
+     */
+    match /users/{userId}/projects/{projectId}/models/{modelId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && newDocHasValidParentLink('projectId', projectId);
+      allow update: if isExistingOwner(userId) && parentLinkIsImmutable('projectId');
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Rules for versions of an ML model.
+     * @path /users/{userId}/projects/{projectId}/models/{modelId}/model_versions/{modelVersionId}
+     * @allow (create) The project owner creating a new version for one of their models.
+     * @deny (update) The project owner trying to change the parent `modelId` of a version.
+     * @principle Restricts access to a user's own data tree and validates relational integrity.
+     */
+    match /users/{userId}/projects/{projectId}/models/{modelId}/model_versions/{modelVersionId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && newDocHasValidParentLink('modelId', modelId);
+      allow update: if isExistingOwner(userId) && parentLinkIsImmutable('modelId');
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Rules for datasets used within a user's project.
+     * @path /users/{userId}/projects/{projectId}/datasets/{datasetId}
+     * @allow (create) The project owner creating a dataset record in their project.
+     * @deny (get) A different user trying to access a dataset they do not own.
+     * @principle Restricts access to a user's own data tree.
+     */
+    match /users/{userId}/projects/{projectId}/datasets/{datasetId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Rules for logs generated by a pipeline run.
+     * @path /users/{userId}/projects/{projectId}/pipeline_runs/{pipelineRunId}/logs/{logId}
+     * @allow (create) The owner creating a log entry for one of their pipeline runs.
+     * @deny (list) Any user trying to list logs from a run they do not own.
+     * @principle Restricts access to a user's own data tree and validates relational integrity.
+     */
+    match /users/{userId}/projects/{projectId}/pipeline_runs/{pipelineRunId}/logs/{logId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && newDocHasValidParentLink('pipelineRunId', pipelineRunId);
+      allow update: if isExistingOwner(userId) && parentLinkIsImmutable('pipelineRunId');
+      allow delete: if isExistingOwner(userId);
+    }
+  }
+}

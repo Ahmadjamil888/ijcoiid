@@ -7,209 +7,131 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  ArrowUp,
-  Bot,
-  CheckCircle,
-  Code,
-  FileText,
-  Paperclip,
-  Wand2,
-  Loader,
-} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import PipelineCanvas from '@/components/pipeline/pipeline-canvas';
-import { useDoc, useUser } from '@/firebase';
-import { useFirestore, useMemoFirebase } from '@/firebase/provider';
-import { useParams } from 'next/navigation';
-import { doc } from 'firebase/firestore';
-import type { Project, SuggestNextStepInput } from '@/lib/types';
+import {
+  useDoc,
+  useUser,
+  useFirestore,
+  useMemoFirebase,
+  useCollection,
+} from '@/firebase';
+import { useParams, useRouter } from 'next/navigation';
+import { doc, collection } from 'firebase/firestore';
+import type { Project, Pipeline } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useState, useRef, useEffect } from 'react';
-import { suggestNextStep } from '@/ai/flows/suggest-next-pipeline-step';
-import { useToast } from '@/hooks/use-toast';
+import { Plus, GitBranch, Play, CheckCircle, Loader, XCircle } from 'lucide-react';
+import Link from 'next/link';
+import { formatDistanceToNow } from 'date-fns';
+import CreatePipelineDialog from '@/components/project/create-pipeline-dialog';
 
-type Message = {
-    isUser: boolean;
-    text: string;
-};
-
-const TaskItem = ({
-  icon,
-  title,
-  isDone,
+const PipelineStatusIcon = ({
+  status,
 }: {
-  icon: React.ReactNode;
-  title: string;
-  isDone: boolean;
-}) => (
-  <div className="flex items-center gap-3">
-    <div
-      className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${
-        isDone
-          ? 'bg-primary/20 text-primary'
-          : 'bg-secondary text-secondary-foreground'
-      }`}
-    >
-      {icon}
-    </div>
-    <p
-      className={`flex-1 text-sm ${
-        isDone ? 'font-medium text-foreground' : 'text-muted-foreground'
-      }`}
-    >
-      {title}
-    </p>
-    {isDone && <CheckCircle className="h-5 w-5 text-primary" />}
-  </div>
-);
-
-const ChatMessage = ({
-  isUser,
-  message,
-}: {
-  isUser: boolean;
-  message: string;
-}) => (
-  <div className={`flex items-start gap-3 ${isUser ? 'justify-end' : ''}`}>
-    {!isUser && (
-      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-        <Bot className="h-5 w-5" />
-      </div>
-    )}
-    <div
-      className={`max-w-xs rounded-lg p-3 text-sm ${
-        isUser
-          ? 'rounded-br-none bg-secondary text-secondary-foreground'
-          : 'rounded-bl-none bg-muted'
-      }`}
-    >
-      {message}
-    </div>
-  </div>
-);
-
-const ConsoleSidebar = ({
-    messages,
-    onSendMessage,
-    isAiResponding,
-}: {
-    messages: Message[],
-    onSendMessage: (message: string) => void,
-    isAiResponding: boolean;
+  status: Pipeline['status'];
 }) => {
-  const [input, setInput] = useState('');
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    // TODO: This is a temporary fix to scroll to the bottom.
-    // A more robust solution would be to use a proper scroll-to-bottom hook.
-    setTimeout(() => {
-        if (scrollAreaRef.current) {
-            const viewport = scrollAreaRef.current.querySelector('div');
-            if (viewport) {
-              viewport.scrollTop = viewport.scrollHeight;
-            }
-        }
-    }, 100);
-  }, [messages]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isAiResponding) return;
-    onSendMessage(input);
-    setInput('');
-  };
-
-  return (
-    <aside className="flex h-full flex-col border-r bg-card">
-      <div className="border-b p-4">
-        <h2 className="text-lg font-semibold tracking-tight">AI Console</h2>
-        <p className="text-sm text-muted-foreground">
-          Chat with the agent to build your pipeline.
-        </p>
-      </div>
-
-      <ScrollArea className="flex-1" ref={scrollAreaRef}>
-        <div className="p-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Tasks</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <TaskItem
-                icon={<FileText className="h-5 w-5" />}
-                title="Analyze Project Goal"
-                isDone
-              />
-              <TaskItem
-                icon={<Code className="h-5 w-5" />}
-                title="Generate Pipeline Structure"
-                isDone
-              />
-              <TaskItem
-                icon={<Wand2 className="h-5 w-5" />}
-                title="Select Base Model"
-                isDone={false}
-              />
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="space-y-4 p-4">
-          {messages.map((msg, index) => (
-            <ChatMessage key={index} isUser={msg.isUser} message={msg.text} />
-          ))}
-           {isAiResponding && (
-            <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                <Bot className="h-5 w-5" />
-              </div>
-              <div className="max-w-xs rounded-lg p-3 text-sm rounded-bl-none bg-muted flex items-center">
-                <Loader className="h-4 w-4 animate-spin" />
-              </div>
-            </div>
-          )}
-        </div>
-      </ScrollArea>
-
-      <div className="border-t bg-card p-4">
-        <form onSubmit={handleSubmit}>
-          <div className="relative rounded-lg border bg-background p-2">
-            <Input
-              placeholder="Ask the AI to make a change..."
-              className="border-none bg-transparent pr-20 ring-offset-transparent focus-visible:ring-0 focus-visible:ring-transparent"
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              disabled={isAiResponding}
-            />
-            <div className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1">
-              <Button variant="ghost" size="icon" type="button" disabled={isAiResponding}>
-                <Paperclip className="h-5 w-5" />
-              </Button>
-              <Button size="icon" className="rounded-full" type="submit" disabled={isAiResponding}>
-                <ArrowUp className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
-        </form>
-      </div>
-    </aside>
-  );
+  switch (status) {
+    case 'COMPLETED':
+      return <CheckCircle className="h-4 w-4 text-green-500" />;
+    case 'FAILED':
+      return <XCircle className="h-4 w-4 text-red-500" />;
+    case 'TRAINING':
+      return <Loader className="h-4 w-4 animate-spin text-blue-500" />;
+    default:
+      return <GitBranch className="h-4 w-4 text-muted-foreground" />;
+  }
 };
 
-export default function ProjectConsolePage() {
+const PipelineList = () => {
   const params = useParams<{ projectId: string }>();
   const { user } = useUser();
   const firestore = useFirestore();
-  const { toast } = useToast();
 
-  const [isAiResponding, setIsAiResponding] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    { isUser: false, text: "Hello! I've analyzed your goal and created an initial pipeline structure. What's next?" },
-  ]);
+  const pipelinesQuery = useMemoFirebase(
+    () =>
+      user && params.projectId
+        ? collection(
+            firestore,
+            `users/${user.uid}/projects/${params.projectId}/pipelines`
+          )
+        : null,
+    [firestore, user, params.projectId]
+  );
+
+  const { data: pipelines, isLoading } = useCollection<Pipeline>(pipelinesQuery);
+
+  if (isLoading) {
+    return <Skeleton className="h-48 w-full" />;
+  }
+
+  if (!pipelines || pipelines.length === 0) {
+    return (
+      <Card className="flex h-48 flex-col items-center justify-center text-center">
+        <CardHeader>
+          <CardTitle>No Pipelines Yet</CardTitle>
+          <CardDescription>
+            Create your first pipeline to get started.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <CreatePipelineDialog>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" /> Create Pipeline
+            </Button>
+          </CreatePipelineDialog>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border">
+      <table className="w-full text-sm">
+        <thead className="border-b">
+          <tr className="[&_th]:px-4 [&_th]:py-3 [&_th]:text-left">
+            <th>Name</th>
+            <th>Status</th>
+            <th>Runs</th>
+            <th>Last Updated</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {pipelines.map(pipeline => (
+            <tr key={pipeline.id} className="border-b last:border-none">
+              <td className="p-4 font-medium">{pipeline.name}</td>
+              <td className="p-4">
+                <div className="flex items-center gap-2">
+                  <PipelineStatusIcon status={pipeline.status} />
+                  <span>{pipeline.status}</span>
+                </div>
+              </td>
+              <td className="p-4">{pipeline.runCount}</td>
+              <td className="p-4 text-muted-foreground">
+                {formatDistanceToNow(new Date(pipeline.updatedAt), {
+                  addSuffix: true,
+                })}
+              </td>
+              <td className="p-4 text-right">
+                <Button variant="outline" size="sm" asChild>
+                  <Link
+                    href={`/projects/${params.projectId}/pipelines/${pipeline.id}`}
+                  >
+                    <Play className="mr-2 h-4 w-4" /> Run
+                  </Link>
+                </Button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+export default function ProjectOverviewPage() {
+  const params = useParams<{ projectId: string }>();
+  const { user } = useUser();
+  const firestore = useFirestore();
 
   const projectRef = useMemoFirebase(
     () =>
@@ -220,55 +142,17 @@ export default function ProjectConsolePage() {
   );
 
   const { data: project, isLoading } = useDoc<Project>(projectRef);
-  
-  const handleSendMessage = async (text: string) => {
-    if (!project) return;
-    
-    const newMessages: Message[] = [...messages, { isUser: true, text }];
-    setMessages(newMessages);
-    setIsAiResponding(true);
-
-    try {
-      const result = await suggestNextStep({
-          history: newMessages.map(m => ({ isUser: m.isUser, text: m.text })),
-          projectGoal: project.goal,
-          taskType: project.taskType,
-      } as SuggestNextStepInput);
-      
-      setMessages(prev => [...prev, { isUser: false, text: result.response }]);
-
-    } catch (error) {
-       toast({
-        variant: "destructive",
-        title: "AI Error",
-        description: "The AI agent failed to respond. Please check your API key or try again.",
-      });
-      // Rollback the user's message on error
-      setMessages(messages);
-    } finally {
-      setIsAiResponding(false);
-    }
-  };
-
 
   if (isLoading) {
     return (
-      <div className="grid h-full grid-cols-[380px_1fr]">
-        <div className="flex flex-col border-r">
-          <div className="border-b p-4">
-            <Skeleton className="h-7 w-32" />
-            <Skeleton className="mt-2 h-4 w-48" />
-          </div>
-          <div className="flex-1 p-4">
-            <Skeleton className="h-full w-full" />
-          </div>
-          <div className="border-t p-4">
-            <Skeleton className="h-14 w-full" />
-          </div>
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-1/3" />
+        <Skeleton className="h-5 w-2/3" />
+        <div className="flex justify-between pt-4">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-10 w-36" />
         </div>
-        <div className="p-6">
-          <Skeleton className="h-full w-full" />
-        </div>
+        <Skeleton className="h-64 w-full" />
       </div>
     );
   }
@@ -287,17 +171,22 @@ export default function ProjectConsolePage() {
   }
 
   return (
-    <div className="grid h-full grid-cols-[380px_1fr]">
-      <ConsoleSidebar messages={messages} onSendMessage={handleSendMessage} isAiResponding={isAiResponding} />
-      <div className="flex flex-col p-6">
-        <div className="mb-4">
-          <h1 className="text-xl font-bold tracking-tight">{project.name}</h1>
-          <p className="text-muted-foreground">{project.goal}</p>
-        </div>
-        <div className="flex-1">
-          <PipelineCanvas />
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">{project.name}</h1>
+        <p className="text-muted-foreground">{project.goal}</p>
       </div>
+
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold">Pipelines</h2>
+        <CreatePipelineDialog>
+          <Button>
+            <Plus className="mr-2 h-4 w-4" /> Create Pipeline
+          </Button>
+        </CreatePipelineDialog>
+      </div>
+
+      <PipelineList />
     </div>
   );
 }

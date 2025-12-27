@@ -8,8 +8,10 @@ import AppHeader from '@/components/app-shell/header';
 
 export default function ProjectLayout({
   children,
+  params
 }: {
   children: React.ReactNode;
+  params: { projectId: string }
 }) {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
@@ -40,7 +42,7 @@ export default function ProjectLayout({
   return (
     <div className="flex h-screen w-full flex-col">
       <AppHeader />
-      <main className="flex-1">{children}</main>
+      <main className="flex-1 p-4 md:p-6 lg:p-8">{children}</main>
     </div>
   );
 }

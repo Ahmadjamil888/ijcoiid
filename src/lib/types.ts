@@ -36,7 +36,7 @@ export type Pipeline = {
   createdAt: string;
   updatedAt: string;
   runCount: number;
-  lastRunStatus?: 'success' | 'failed' | 'running';
+  status: 'PLANNED' | 'TRAINING' | 'COMPLETED' | 'FAILED';
 };
 
 export type PipelineRun = {

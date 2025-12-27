@@ -8,13 +8,13 @@ import {
   Settings,
   Folder,
   Search,
-  ChevronRight,
-  ChevronDown,
   LogOut,
 } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
+  SheetHeader,
+  SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -35,7 +35,7 @@ import {
     BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import Logo from '@/components/logo';
-import { mockProjects, mockUser } from '@/lib/data';
+import { mockProjects } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { useAuth, useUser } from '@/firebase';
@@ -107,43 +107,44 @@ export default function AppHeader() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="flex flex-col p-0">
-            <div className="flex h-16 items-center border-b px-6">
-                <Logo inApp />
-            </div>
-            <nav className="grid gap-2 p-4 text-lg font-medium">
-                <Link
-                    href="/dashboard"
-                    className={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                        pathname === '/dashboard' && "text-primary bg-primary/10"
-                    )}
-                >
-                    <Home className="h-4 w-4" />
-                    Dashboard
-                </Link>
-                <h3 className="px-3 pt-4 text-xs font-semibold uppercase text-muted-foreground">Projects</h3>
-                {mockProjects.map((project) => (
-                    <Link
-                        key={project.id}
-                        href={`/projects/${project.id}`}
-                        className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                            pathname.startsWith(`/projects/${project.id}`) && "text-primary bg-primary/10"
-                        )}
-                    >
-                        <Folder className="h-4 w-4" />
-                        {project.name}
-                    </Link>
-                ))}
-                 <Link
-                    href="/settings"
-                    className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary mt-4",
-                        pathname.startsWith('/settings') && "text-primary bg-primary/10"
-                    )}
-                >
-                    <Settings className="h-4 w-4" />
-                    Settings
-                </Link>
-            </nav>
+          <SheetHeader className="h-16 items-start border-b px-6 pt-4">
+            <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+            <Logo inApp />
+          </SheetHeader>
+          <nav className="grid gap-2 p-4 text-lg font-medium">
+              <Link
+                  href="/dashboard"
+                  className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                      pathname === '/dashboard' && "text-primary bg-primary/10"
+                  )}
+              >
+                  <Home className="h-4 w-4" />
+                  Dashboard
+              </Link>
+              <h3 className="px-3 pt-4 text-xs font-semibold uppercase text-muted-foreground">Projects</h3>
+              {mockProjects.map((project) => (
+                  <Link
+                      key={project.id}
+                      href={`/projects/${project.id}`}
+                      className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                          pathname.startsWith(`/projects/${project.id}`) && "text-primary bg-primary/10"
+                      )}
+                  >
+                      <Folder className="h-4 w-4" />
+                      {project.name}
+                  </Link>
+              ))}
+               <Link
+                  href="/settings"
+                  className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary mt-4",
+                      pathname.startsWith('/settings') && "text-primary bg-primary/10"
+                  )}
+              >
+                  <Settings className="h-4 w-4" />
+                  Settings
+              </Link>
+          </nav>
         </SheetContent>
       </Sheet>
       <div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">

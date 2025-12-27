@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useParams } from 'next/navigation';
 import { GitBranch, Play, Cpu, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDoc, useUser } from '@/firebase';
@@ -12,21 +12,22 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ProjectLayout({
   children,
-  params,
 }: {
   children: React.ReactNode;
-  params: { projectId: string };
 }) {
   const pathname = usePathname();
+  const params = useParams<{ projectId: string }>();
   const firestore = useFirestore();
   const { user } = useUser();
 
+  const projectId = params.projectId;
+
   const projectRef = useMemoFirebase(
     () =>
-      user
-        ? doc(firestore, `users/${user.uid}/projects/${params.projectId}`)
+      user && projectId
+        ? doc(firestore, `users/${user.uid}/projects/${projectId}`)
         : null,
-    [firestore, user, params.projectId]
+    [firestore, user, projectId]
   );
 
   const { data: project, isLoading } = useDoc<Project>(projectRef);

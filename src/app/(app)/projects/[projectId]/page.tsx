@@ -15,6 +15,7 @@ import {
   FileText,
   Paperclip,
   Wand2,
+  Loader,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +27,9 @@ import { useParams } from 'next/navigation';
 import { doc } from 'firebase/firestore';
 import type { Project } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { suggestNextStep } from '@/ai/flows/suggest-next-pipeline-step';
+import { useToast } from '@/hooks/use-toast';
 
 type Message = {
     isUser: boolean;
@@ -70,7 +73,7 @@ const ChatMessage = ({
   isUser: boolean;
   message: string;
 }) => (
-  <div className={`flex items-start gap-3 ${isUser ? 'ml-auto' : ''}`}>
+  <div className={`flex items-start gap-3 ${isUser ? 'justify-end' : ''}`}>
     {!isUser && (
       <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
         <Bot className="h-5 w-5" />
@@ -90,16 +93,32 @@ const ChatMessage = ({
 
 const ConsoleSidebar = ({
     messages,
-    onSendMessage
+    onSendMessage,
+    isAiResponding,
 }: {
     messages: Message[],
-    onSendMessage: (message: string) => void
+    onSendMessage: (message: string) => void,
+    isAiResponding: boolean;
 }) => {
   const [input, setInput] = useState('');
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // TODO: This is a temporary fix to scroll to the bottom.
+    // A more robust solution would be to use a proper scroll-to-bottom hook.
+    setTimeout(() => {
+        if (scrollAreaRef.current) {
+            const viewport = scrollAreaRef.current.querySelector('div');
+            if (viewport) {
+              viewport.scrollTop = viewport.scrollHeight;
+            }
+        }
+    }, 100);
+  }, [messages]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || isAiResponding) return;
     onSendMessage(input);
     setInput('');
   };
@@ -113,7 +132,7 @@ const ConsoleSidebar = ({
         </p>
       </div>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1" ref={scrollAreaRef}>
         <div className="p-4">
           <Card>
             <CardHeader>
@@ -143,6 +162,16 @@ const ConsoleSidebar = ({
           {messages.map((msg, index) => (
             <ChatMessage key={index} isUser={msg.isUser} message={msg.text} />
           ))}
+           {isAiResponding && (
+            <div className="flex items-start gap-3">
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                <Bot className="h-5 w-5" />
+              </div>
+              <div className="max-w-xs rounded-lg p-3 text-sm rounded-bl-none bg-muted flex items-center">
+                <Loader className="h-4 w-4 animate-spin" />
+              </div>
+            </div>
+          )}
         </div>
       </ScrollArea>
 
@@ -154,12 +183,13 @@ const ConsoleSidebar = ({
               className="border-none bg-transparent pr-20 ring-offset-transparent focus-visible:ring-0 focus-visible:ring-transparent"
               value={input}
               onChange={e => setInput(e.target.value)}
+              disabled={isAiResponding}
             />
             <div className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1">
-              <Button variant="ghost" size="icon" type="button">
+              <Button variant="ghost" size="icon" type="button" disabled={isAiResponding}>
                 <Paperclip className="h-5 w-5" />
               </Button>
-              <Button size="icon" className="rounded-full" type="submit">
+              <Button size="icon" className="rounded-full" type="submit" disabled={isAiResponding}>
                 <ArrowUp className="h-5 w-5" />
               </Button>
             </div>
@@ -174,22 +204,12 @@ export default function ProjectConsolePage() {
   const params = useParams<{ projectId: string }>();
   const { user } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
 
+  const [isAiResponding, setIsAiResponding] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     { isUser: false, text: "Hello! I've analyzed your goal and created an initial pipeline structure. What's next?" },
-    { isUser: true, text: "What model did you select?" },
-    { isUser: false, text: "Based on your goal of sentiment analysis, I've selected 'distilbert-base-uncased' as a starting point due to its balance of performance and efficiency." },
   ]);
-
-  const handleSendMessage = (text: string) => {
-    // Add user message
-    setMessages(prev => [...prev, { isUser: true, text }]);
-
-    // Simulate AI response
-    setTimeout(() => {
-        setMessages(prev => [...prev, { isUser: false, text: `Acknowledged: "${text}". I am processing your request.`}]);
-    }, 1000);
-  };
 
   const projectRef = useMemoFirebase(
     () =>
@@ -200,6 +220,36 @@ export default function ProjectConsolePage() {
   );
 
   const { data: project, isLoading } = useDoc<Project>(projectRef);
+  
+  const handleSendMessage = async (text: string) => {
+    if (!project) return;
+    
+    const newMessages: Message[] = [...messages, { isUser: true, text }];
+    setMessages(newMessages);
+    setIsAiResponding(true);
+
+    try {
+      const result = await suggestNextStep({
+          history: newMessages,
+          projectGoal: project.goal,
+          taskType: project.taskType,
+      });
+      
+      setMessages(prev => [...prev, { isUser: false, text: result.response }]);
+
+    } catch (error) {
+       toast({
+        variant: "destructive",
+        title: "AI Error",
+        description: "The AI agent failed to respond. Please check your API key or try again.",
+      });
+      // Rollback the user's message on error
+      setMessages(messages);
+    } finally {
+      setIsAiResponding(false);
+    }
+  };
+
 
   if (isLoading) {
     return (
@@ -238,7 +288,7 @@ export default function ProjectConsolePage() {
 
   return (
     <div className="grid h-full grid-cols-[380px_1fr]">
-      <ConsoleSidebar messages={messages} onSendMessage={handleSendMessage} />
+      <ConsoleSidebar messages={messages} onSendMessage={handleSendMessage} isAiResponding={isAiResponding} />
       <div className="flex flex-col p-6">
         <div className="mb-4">
           <h1 className="text-xl font-bold tracking-tight">{project.name}</h1>

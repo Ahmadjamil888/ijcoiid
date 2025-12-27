@@ -3,78 +3,73 @@
  * @fileOverview This file defines a Genkit flow for suggesting the next logical step in an ML pipeline.
  *
  * The flow takes the current pipeline state as input and suggests the next step to the user.
- * It exports the SuggestNextPipelineStep function, along with its input and output types.
+ * It exports the suggestNextStep function, along with its input and output types.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 // Define the input schema
-const SuggestNextPipelineStepInputSchema = z.object({
-  currentPipelineSteps: z
-    .array(z.string())
-    .describe('The list of current steps in the pipeline.'),
+export const SuggestNextStepInputSchema = z.object({
+  history: z
+    .array(z.object({ isUser: z.boolean(), text: z.string() }))
+    .describe('The conversation history between the user and the AI.'),
   projectGoal: z.string().describe('The overall goal of the AI project.'),
   taskType: z
     .enum(['NLP', 'CV', 'Audio', 'Tabular'])
     .describe('The type of task for the AI project.'),
 });
-export type SuggestNextPipelineStepInput = z.infer<
-  typeof SuggestNextPipelineStepInputSchema
+export type SuggestNextStepInput = z.infer<
+  typeof SuggestNextStepInputSchema
 >;
 
 // Define the output schema
-const SuggestNextPipelineStepOutputSchema = z.object({
-  suggestedNextStep: z.string().describe('The suggested next step in the pipeline.'),
-  reasoning: z.string().describe('The reasoning behind the suggestion.'),
+export const SuggestNextStepOutputSchema = z.object({
+  response: z
+    .string()
+    .describe('The AI-generated response to the user query.'),
 });
-export type SuggestNextPipelineStepOutput = z.infer<
-  typeof SuggestNextPipelineStepOutputSchema
+export type SuggestNextStepOutput = z.infer<
+  typeof SuggestNextStepOutputSchema
 >;
 
 // Exported function to call the flow
-export async function suggestNextPipelineStep(
-  input: SuggestNextPipelineStepInput
-): Promise<SuggestNextPipelineStepOutput> {
-  return suggestNextPipelineStepFlow(input);
+export async function suggestNextStep(
+  input: SuggestNextStepInput
+): Promise<SuggestNextStepOutput> {
+  return suggestNextStepFlow(input);
 }
 
 // Define the prompt
-const suggestNextPipelineStepPrompt = ai.definePrompt({
-  name: 'suggestNextPipelineStepPrompt',
-  input: {schema: SuggestNextPipelineStepInputSchema},
-  output: {schema: SuggestNextPipelineStepOutputSchema},
-  prompt: `You are an AI pipeline expert. Given the current steps in the pipeline, the project goal, and the task type, suggest the next logical step in the pipeline.
+const suggestNextStepPrompt = ai.definePrompt({
+  name: 'suggestNextStepPrompt',
+  input: {schema: SuggestNextStepInputSchema},
+  output: {schema: SuggestNextStepOutputSchema},
+  prompt: `You are an expert AI engineering assistant. Your goal is to guide a user in building an ML pipeline.
+You are in a chat interface. Based on the conversation history, project goal, and task type, provide a helpful and concise response to the user's last message.
+Guide them on the next logical step.
 
 Project Goal: {{{projectGoal}}}
 Task Type: {{{taskType}}}
-Current Pipeline Steps:
-{{#if currentPipelineSteps}}
-  {{#each currentPipelineSteps}}- {{{this}}}
-  {{/each}}
-{{else}}
-  None
-{{/if}}
 
-Suggest the next step and explain your reasoning.
+Conversation History:
+{{#each history}}
+  {{#if this.isUser}}User: {{else}}AI: {{/if}}{{this.text}}
+{{/each}}
 
-Output in the following JSON format:
-{
-  "suggestedNextStep": "<next_step_name>",
-  "reasoning": "<reasoning_for_the_suggestion>"
-}
+Based on the last user message, what is your response?
 `,
 });
 
 // Define the flow
-const suggestNextPipelineStepFlow = ai.defineFlow(
+const suggestNextStepFlow = ai.defineFlow(
   {
-    name: 'suggestNextPipelineStepFlow',
-    inputSchema: SuggestNextPipelineStepInputSchema,
-    outputSchema: SuggestNextPipelineStepOutputSchema,
+    name: 'suggestNextStepFlow',
+    inputSchema: SuggestNextStepInputSchema,
+    outputSchema: SuggestNextStepOutputSchema,
   },
   async input => {
-    const {output} = await suggestNextPipelineStepPrompt(input);
+    const {output} = await suggestNextStepPrompt(input);
     return output!;
   }
 );

@@ -19,16 +19,18 @@ export type Project = {
   modelCount: number;
 };
 
-export type PipelineNodeData = {
-  label: string;
-  status?: 'running' | 'success' | 'failed' | 'idle';
-  type: string;
+export type PipelineNode = {
+  id: string;
+  type: string; // e.g., 'datasetNode', 'modelNode'
+  data: { label: string; [key: string]: any };
+  position: { x: number; y: number };
 };
 
 export type Pipeline = {
-  id: string;
+  id:string;
   name: string;
   projectId: string;
+  nodes?: string; // JSON representation of nodes
   createdAt: string;
   updatedAt: string;
   runCount: number;

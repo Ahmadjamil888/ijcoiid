@@ -1,112 +1,46 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname, useParams } from 'next/navigation';
-import { GitBranch, Play, Cpu, Settings } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useDoc, useUser } from '@/firebase';
-import { useFirestore, useMemoFirebase } from '@/firebase/provider';
-import { doc } from 'firebase/firestore';
-import type { Project } from '@/lib/types';
+import { useUser } from '@/firebase';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import AppHeader from '@/components/app-shell/header';
 
 export default function ProjectLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const params = useParams<{ projectId: string }>();
-  const firestore = useFirestore();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
 
-  const projectId = params.projectId;
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, isUserLoading, router]);
 
-  const projectRef = useMemoFirebase(
-    () =>
-      user && projectId
-        ? doc(firestore, `users/${user.uid}/projects/${projectId}`)
-        : null,
-    [firestore, user, projectId]
-  );
-
-  const { data: project, isLoading } = useDoc<Project>(projectRef);
-
-  if (isLoading) {
+  if (isUserLoading || !user) {
     return (
-      <div className="flex flex-col gap-8">
-        <div>
-          <Skeleton className="h-9 w-1/2" />
-          <Skeleton className="h-5 w-3/4 mt-2" />
-        </div>
-        <nav className="border-b">
-          <div className="flex space-x-6">
-            <Skeleton className="h-10 w-24" />
-            <Skeleton className="h-10 w-24" />
-            <Skeleton className="h-10 w-24" />
-            <Skeleton className="h-10 w-24" />
+      <div className="flex h-screen w-full flex-col">
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
+          <Skeleton className="h-8 w-48" />
+          <div className="ml-auto flex gap-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-8 w-8 rounded-full" />
           </div>
-        </nav>
-        <div>
-          <Skeleton className="h-64 w-full" />
-        </div>
+        </header>
+        <main className="flex-1 p-4 md:p-6 lg:p-8">
+          <Skeleton className="h-full w-full" />
+        </main>
       </div>
     );
   }
 
-  if (!project) {
-    return <div>Project not found</div>;
-  }
-
-  const navItems = [
-    {
-      name: 'Pipelines',
-      href: `/projects/${project.id}`,
-      icon: GitBranch,
-      exact: true,
-    },
-    { name: 'Runs', href: `/projects/${project.id}/runs`, icon: Play },
-    { name: 'Models', href: `/projects/${project.id}/models`, icon: Cpu },
-    {
-      name: 'Settings',
-      href: `/projects/${project.id}/settings`,
-      icon: Settings,
-    },
-  ];
-
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-          {project.name}
-        </h1>
-        <p className="text-muted-foreground mt-1">{project.goal}</p>
-      </div>
-      <nav>
-        <div className="border-b">
-          <div className="-mb-px flex space-x-6">
-            {navItems.map((item) => {
-              const isActive = item.exact
-                ? pathname === item.href
-                : pathname.startsWith(item.href);
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={cn(
-                    'flex items-center gap-2 whitespace-nowrap border-b-2 border-transparent px-1 py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground',
-                    isActive && 'border-primary text-primary'
-                  )}
-                >
-                  <item.icon className="h-4 w-4" />
-                  {item.name}
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      </nav>
-      <div>{children}</div>
+    <div className="flex h-screen w-full flex-col">
+      <AppHeader />
+      <main className="flex-1">{children}</main>
     </div>
   );
 }

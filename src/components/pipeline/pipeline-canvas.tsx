@@ -1,16 +1,54 @@
-import { Card, CardContent } from '../ui/card';
-import { GitBranch } from 'lucide-react';
+'use client';
+
+import React, { useCallback, useState } from 'react';
+import {
+  ReactFlow,
+  MiniMap,
+  Controls,
+  Background,
+  useNodesState,
+  useEdgesState,
+  addEdge,
+  Connection,
+  Edge,
+  Node,
+} from 'reactflow';
+import 'reactflow/dist/style.css';
+
+const initialNodes: Node[] = [
+  {
+    id: '1',
+    type: 'input',
+    data: { label: 'Dataset Fetch' },
+    position: { x: 250, y: 25 },
+  },
+];
+
+const initialEdges: Edge[] = [];
 
 export default function PipelineCanvas() {
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  const onConnect = useCallback(
+    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
+    [setEdges]
+  );
+
   return (
-    <Card className="flex h-full items-center justify-center bg-background">
-      <CardContent className="flex flex-col items-center justify-center p-6 text-center text-muted-foreground">
-        <GitBranch className="h-16 w-16" />
-        <h3 className="mt-4 text-lg font-semibold">Pipeline Canvas</h3>
-        <p className="mt-2 text-sm">
-          Drag and drop nodes from the left sidebar to build your pipeline.
-        </p>
-      </CardContent>
-    </Card>
+    <div className="h-full w-full">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        fitView
+      >
+        <Controls />
+        <MiniMap />
+        <Background gap={12} size={1} />
+      </ReactFlow>
+    </div>
   );
 }

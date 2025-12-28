@@ -84,53 +84,33 @@ export default function DashboardPage() {
     setIsCreating(true);
 
     try {
-      const { taskType, projectName } = await classifyProjectPrompt({ prompt });
-      
-      if (!taskType || !projectName) {
-        throw new Error('AI failed to classify the project.');
-      }
+      const sessionRef = doc(collection(firestore, `users/${user.uid}/build-sessions`));
 
-      const projectRef = doc(collection(firestore, `users/${user.uid}/projects`));
-      
-      await setDocumentNonBlocking(projectRef, {
-        id: projectRef.id,
-        name: projectName,
-        taskType,
-        goal: prompt,
-        createdAt: new Date().toISOString(),
+      await setDocumentNonBlocking(sessionRef, {
+        id: sessionRef.id,
+        prompt,
         userId: user.uid,
-        pipelineCount: 1,
-        runCount: 0,
-        modelCount: 0,
+        createdAt: new Date().toISOString(),
+        status: 'initializing',
+        messages: [],
+        currentStep: 'starting',
       });
 
-      const { pipelineDefinition } = await generatePipelineFromPrompt({ prompt });
-      
-      const pipelinesCollection = collection(firestore, projectRef.path, 'pipelines');
-      await addDocumentNonBlocking(pipelinesCollection, {
-          name: 'Initial AI-Generated Pipeline',
-          nodes: pipelineDefinition,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          projectId: projectRef.id,
-          runCount: 0,
-      });
-      
       toast({
-        title: 'Project Created!',
-        description: `Navigating to your new project: ${projectName}`,
+        title: 'Starting AI Builder!',
+        description: 'Redirecting to the build interface...',
       });
 
-      router.push(`/projects/${projectRef.id}`);
+      router.push(`/build/${sessionRef.id}`);
 
     } catch (error: any) {
-      console.error("Failed to create project from prompt:", error);
-      const description = error.message.includes('GEMINI_API_KEY') 
+      console.error("Failed to start build session:", error);
+      const description = error.message.includes('GEMINI_API_KEY')
         ? 'Please provide a Gemini API key to enable AI features.'
         : 'An unexpected error occurred. Please try again.';
       toast({
         variant: 'destructive',
-        title: 'Error Creating Project',
+        title: 'Error Starting Build',
         description,
       });
     } finally {

@@ -58,3 +58,9 @@ const suggestNextStepFlow = ai.defineFlow(
     return output;
   }
 );
+
+export async function suggestNextPipelineStep(
+  input: SuggestNextStepInput
+): Promise<SuggestNextStepOutput> {
+  return suggestNextStepFlow(input);
+}
